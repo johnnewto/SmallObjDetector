@@ -8,7 +8,7 @@ import cv2 as cv2
 import numpy as np
 from imutils import resize
 
-import moviepy.editor as mvp
+
 from moviepy.video.io.ffmpeg_writer import FFMPEG_VideoWriter
 
 import time, sys
@@ -45,7 +45,7 @@ def static(**kw):
 def timeval(func):
     def wrapper(*arg, **kw):
         t1 = default_timer()
-        res = func(*arg, **kw)
+        # res = func(*arg, **kw)
         t2 = default_timer()
         print (f'{t2 - t1} {func.__name__}')
     return wrapper
@@ -271,7 +271,7 @@ def old_make_tile_list(image: np.ndarray, tracks, tile_size=80,  display_scale=1
     - Returns list of tuple(numpy, labelID, classID, pos(r,c), frameID)
     """
     #
-    scale = 1
+   
     tile_list = []
     numTracks = len(tracks)
     if which is None:
@@ -294,7 +294,7 @@ def old_make_tile_list(image: np.ndarray, tracks, tile_size=80,  display_scale=1
                 logger.error(f'tile shape is wrong {img.shape}')
 
     except:
-        for i, trk in enumerate(tracks):
+        for trk in tracks:
             row = int((trk[1]+trk[3])/2)
             col = int((trk[0]+trk[2])/2)
             labelID = int(trk[4])
@@ -332,7 +332,7 @@ def make_tile_list(tile_list, tracks, which=None):
     if which is None:
         which = np.ones(numTracks, dtype=np.bool)
     for i, trk in enumerate(tracks):
-        (frame_ID, labelID, col, row, w, h, confidence, classID, *z) = trk
+        (frame_ID, labelID, col, row, _, _, confidence, classID, *_) = trk
         # (col, row, h, w) = [round(v / scale) for v in (col, row, h, w)]
         if which[i]:
             # row = image.shape[0] - h if row >= image.shape[0]-h else row
@@ -396,7 +396,7 @@ def old_tile_images(imgList, rows=1, label=True, tile_width=None, tile_height=No
     rows = 1 if rows < 1 else rows
     totalImages = len(imgList)
     cols = totalImages // rows if totalImages // rows * rows == totalImages else totalImages // rows + 1
-    (height, width, *z) = imgList[0][0].shape
+    (height, width, *_) = imgList[0][0].shape
 
     img = np.zeros((height*rows, width*cols), np.uint8)
     for x in range(cols):
@@ -657,10 +657,15 @@ class VideoWriter:
         if self.params['filename'] == '_autoplay.mp4':
             self.show()
 
-    def show(self, **kw):
-        self.close()
-        fn = self.params['filename']
-        display(mvp.ipython_display(fn, **kw))    
+    def show_video(self, **kw):
+        """ Display the video in a jupyter notebook"""
+        try:
+            import moviepy.editor as mvp
+            self.close()
+            fn = self.params['filename']
+            display(mvp.ipython_display(fn, **kw))   # display in jupyter notebook 
+        except Exception as e:
+            print(f'Error: {e} not found')
 
 if __name__ == '__main__':
 

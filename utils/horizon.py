@@ -5,7 +5,7 @@ import cv2 as cv2
 import numpy as np
 
 from imutils import resize
-from image_utils import cv2_img_show
+# from image_utils import cv2_img_show
 import time, sys
 
 if sys.platform == "win32":
@@ -188,7 +188,7 @@ def find_sky_2(gray_img_s, threshold=None, kernal_size=5):
     kernel = np.ones((5, 5), 'uint8')
     # edges = cv2.morphologyEx(edges, cv2.MORPH_DILATE, kernel, iterations=1)
 
-    cv2_img_show('find_sky_2-new_mask', labels)
+    # cv2_img_show('find_sky_2-new_mask', labels)
 
     num_regions, labels, stats, centroids = cv2.connectedComponentsWithStats(labels)
 
@@ -214,7 +214,7 @@ def find_sky_2(gray_img_s, threshold=None, kernal_size=5):
 
     labels[labels > 0] = 255
     labels = labels.astype('uint8')
-    cv2_img_show('find_sky_2-labels pruned', labels)
+    # cv2_img_show('find_sky_2-labels pruned', labels)
     return labels
 
 

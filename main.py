@@ -19,7 +19,7 @@ import numpy as np
 import utils.image_loader as il
 from utils.cmo_peak import CMO_Peak
 from utils.g_images import setGImages, getGImages
-from utils.image_utils import resize, putText, cv2_img_show, putlabel, overlay_mask, draw_bboxes
+from utils.image_utils import resize, putText, cv2_img_show, putlabel, overlay_mask, draw_bboxes, VideoWriter
 # from utils.show_images import  putText, cv2_img_show
 
 # import typing as typ
@@ -61,7 +61,7 @@ class Main:
         cv2.namedWindow(WindowName, cv2.WINDOW_NORMAL)
 
         # These two lines will force your "Main View" window to be on top with focus.
-        cv2.setWindowProperty(WindowName, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        # cv2.setWindowProperty(WindowName, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.setWindowProperty(WindowName, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
 
         if self.record:
@@ -122,7 +122,7 @@ class Main:
                 k = cv2.waitKey(wait_timeout)
 
             # self.loader.direction_fwd = not self.loader.direction_fwd
-            wait_timeout = 0
+            wait_timeout = 10
 
             k = cv2.waitKey(wait_timeout)
             if k == ord('q') or k == 27:
@@ -227,16 +227,11 @@ if __name__ == '__main__':
     home = str(Path.home())
 
     # if data path exists use it
-    path = home + '/data/maui-data/Karioitahi_09Feb2022/132MSDCF-28mm-f4' 
-    # path = home + '/data/maui-data/Karioitahi_09Feb2022/136MSDCF'
-    # path = home + '/data/maui-data/Karioitahi_15Jan2022/125MSDCF-landing'
-    # path = home + '/data/maui-data/Tairua_15Jan2022/116MSDCF'
-    # path = home + '/data/maui-data/Tairua_15Jan2022/109MSDCF'
-    # path = home + '/data/maui-data/karioitahi_13Aug2022/SonyA7C/103MSDCF'
-    path += '-use-local-path'
-    if not os.path.exists(path):
-        print(f"Path {path} does not exist, using local path")
-        path = "data/Karioitahi_09Feb2022/132MSDCF-28mm-f4"
+    path = home + '/data/maui-data/Karioitahi_09Feb2022/132MSDCF-28mm-f4'
+
+    # if not os.path.exists(path):
+    #     print(f"Path {path} does not exist, using local path")
+    #     path = "data/Karioitahi_09Feb2022/132MSDCF-28mm-f4"
 
 
     loader = il.ImageLoader(path + '/*.JPG', mode='RGB', cvtgray=False, start_frame=0)

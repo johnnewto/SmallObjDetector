@@ -34,7 +34,7 @@ class _ImageLoader:
         self.restep = False
 
     def parse_input(self, path):
-        files =  glob.glob(self.path)
+        files = glob.glob(self.path)
         if len(files) <= 1:
             print(f"No files found in {self.path}")
             return []
@@ -55,9 +55,6 @@ class _ImageLoader:
         #         # folder with images
         #         paths = [os.path.join(path, image) for image in os.listdir(path)]
         #         return paths
-
-
-
 
 
     def __iter__(self):
@@ -245,7 +242,7 @@ methods = {
 
 
 if __name__ == '__main__':
-    from utils.show_images import putText
+    from image_utils import putText
     from pathlib import Path
 
     home = str(Path.home())

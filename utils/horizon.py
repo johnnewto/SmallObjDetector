@@ -3,9 +3,9 @@ __all__ = ['get_project_root', 'near_mask', 'mask_horizon_1', 'mask_horizon_2', 
 
 import cv2 as cv2
 import numpy as np
-from utils.show_images import cv2_img_show
-from imutils import resize
 
+from imutils import resize
+from image_utils import cv2_img_show
 import time, sys
 
 if sys.platform == "win32":
@@ -257,31 +257,31 @@ def o_find_sky(img, threshold=None, kernal_size=5):
     return new_mask
 
 
-def old_find_sky(img, threshold=None, kernal_size=10):
-    mask = mask_horizon(img, threshold=threshold, kernal_size=kernal_size)
-    mask = 255 - mask
-    num_regions, labels, stats, centroids = cv2.connectedComponentsWithStats(mask)
-    area_sort = np.argsort(stats[:, -1])
-    # choose the region that is the largest brightest
-    brightest = 0
-    b_idx = -1
-    for i in range(min(num_regions, 3)):
-        idx = area_sort[-(i + 1)]
-        b = np.mean(img[labels == idx])
-        area_ratio = stats[idx][4] / (mask.shape[0] * mask.shape[1])
-        if b > brightest and area_ratio > 0.25:
-            brightest = b
-            b_idx = idx
-
-    assert b_idx > -1
-    new_mask = np.ones_like(mask)
-    new_mask[labels == b_idx] = 0
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernal_size, kernal_size))
-    new_mask = cv2.morphologyEx(new_mask, cv2.MORPH_OPEN, kernel)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernal_size // 2, kernal_size // 2))
-    new_mask = cv2.morphologyEx(new_mask, cv2.MORPH_DILATE, kernel, iterations=3)
-    # new_mask = cv2.morphologyEx(new_mask, cv2.MORPH_DILATE, kernel)
-    return new_mask
+# def old_find_sky(img, threshold=None, kernal_size=10):
+#     mask = mask_horizon(img, threshold=threshold, kernal_size=kernal_size)
+#     mask = 255 - mask
+#     num_regions, labels, stats, centroids = cv2.connectedComponentsWithStats(mask)
+#     area_sort = np.argsort(stats[:, -1])
+#     # choose the region that is the largest brightest
+#     brightest = 0
+#     b_idx = -1
+#     for i in range(min(num_regions, 3)):
+#         idx = area_sort[-(i + 1)]
+#         b = np.mean(img[labels == idx])
+#         area_ratio = stats[idx][4] / (mask.shape[0] * mask.shape[1])
+#         if b > brightest and area_ratio > 0.25:
+#             brightest = b
+#             b_idx = idx
+#
+#     assert b_idx > -1
+#     new_mask = np.ones_like(mask)
+#     new_mask[labels == b_idx] = 0
+#     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernal_size, kernal_size))
+#     new_mask = cv2.morphologyEx(new_mask, cv2.MORPH_OPEN, kernel)
+#     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernal_size // 2, kernal_size // 2))
+#     new_mask = cv2.morphologyEx(new_mask, cv2.MORPH_DILATE, kernel, iterations=3)
+#     # new_mask = cv2.morphologyEx(new_mask, cv2.MORPH_DILATE, kernel)
+#     return new_mask
 
 
 def near_mask(pnt, mask, dist=10):
@@ -341,36 +341,36 @@ def set_horizon(gray_img_s):
     # getGImages().horizon = labels
 
 
-if __name__ == '__main__':
-    from utils.show_images import putText
-
-    (rows, cols) = (2000, 3000)
-    center = (2750, 4350)
-    (_r, _c) = (center[0] - rows // 2, center[1] - cols // 2)
-    crop = [_r, _r + rows, _c, _c + cols]
-    home = str(Path.home())
-    images = ImageLoader(home + "/data/large_plane/images.npy", crop=crop, scale=0.1, color='Gray')
-    wait_timeout = 100
-    for img, i in images:
-        # cmo =  update(cmo)
-        # img = next(images)
-        img = resize(img, width=500)
-        putText(img, f'Frame = {i}, fontScale=0.5')
-        cv2.imshow('image', img)
-        k = cv2.waitKey(wait_timeout)
-        if k == ord('q') or k == 27:
-            break
-        if k == ord(' '):
-            wait_timeout = 0
-        if k == ord('d'):
-            wait_timeout = 0
-            images.direction_fwd = not images.direction_fwd
-        if k == ord('g'):
-            wait_timeout = 100
-        if k == ord('r'):
-            # change direction
-            wait_timeout = 0
-            images.restep = True
-
-    cv2.waitKey(1000)
-    cv2.destroyAllWindows()
+# if __name__ == '__main__':
+#     from utils.show_images import putText
+#
+#     (rows, cols) = (2000, 3000)
+#     center = (2750, 4350)
+#     (_r, _c) = (center[0] - rows // 2, center[1] - cols // 2)
+#     crop = [_r, _r + rows, _c, _c + cols]
+#     home = str(Path.home())
+#     images = ImageLoader(home + "/data/large_plane/images.npy", crop=crop, scale=0.1, color='Gray')
+#     wait_timeout = 100
+#     for img, i in images:
+#         # cmo =  update(cmo)
+#         # img = next(images)
+#         img = resize(img, width=500)
+#         putText(img, f'Frame = {i}, fontScale=0.5')
+#         cv2.imshow('image', img)
+#         k = cv2.waitKey(wait_timeout)
+#         if k == ord('q') or k == 27:
+#             break
+#         if k == ord(' '):
+#             wait_timeout = 0
+#         if k == ord('d'):
+#             wait_timeout = 0
+#             images.direction_fwd = not images.direction_fwd
+#         if k == ord('g'):
+#             wait_timeout = 100
+#         if k == ord('r'):
+#             # change direction
+#             wait_timeout = 0
+#             images.restep = True
+#
+#     cv2.waitKey(1000)
+#     cv2.destroyAllWindows()

@@ -1,0 +1,12 @@
+
+imutils
+keyboard==0.13.5
+matplotlib
+moviepy
+numpy
+opencv-python==4.7.0.72
+Pillow
+PyTurboJPEG==1.7.3
+scipy
+scikit-image
+

@@ -62,58 +62,7 @@ def norm_uint8(img):
     return cv2.normalize(img, img, 0, 255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
 
 
-# @dataclass
-# class Images:
-#     maxpool:int = 12
-#     CMO_kernalsize = 3
-#     full_rgb:np.array = None
-#     small_rgb:np.array = None
-#     full_gray:np.array = None
-#     small_gray:np.array = None
-#     minpool:np.array = None
-#     minpool_f:np.array = None
-#     last_minpool_f:np.array = None
-#     cmo:np.array = None
-#     mask:np.array = None
-#     horizon:np.array = None
-#     filename = None
-#
-#     def set(self, image:np.array, _filename:str=''):
-#         self.full_rgb = image
-#         self.filename = _filename
-#         if self.full_rgb.ndim == 3:
-#             # use this as much faster than cv2.cvtColor(imgrgb, cv2.COLOR_BGR2GRAY) (~24msec for 6K image)
-#             self.full_gray = self.full_rgb[:,:,1]
-#
-#         self.minpool = min_pool(self.full_gray, self.maxpool, self.maxpool)
-#         small_gray = resize(self.full_gray, width=self.minpool.shape[1])
-#         self.small_rgb = resize(self.full_rgb, width=self.minpool.shape[1])
-#         self.small_gray = np.zeros_like(self.minpool, dtype='uint8')
-#         n_rows = min(self.minpool.shape[0], small_gray.shape[0])
-#         self.small_gray[:n_rows,:] = small_gray[:n_rows,:]
-#         # self.small_gray = small_gray
-#         self.minpool_f = np.float32(self.minpool )
-#
-#     def mask_sky(self):
-#         self.mask = find_sky_2(self.minpool, threshold=80,  kernal_size=7)
-#         self.cmo = BH_op(self.minpool, (self.CMO_kernalsize, self.CMO_kernalsize))
-#         self.cmo[self.mask > 0] = 0
-#
-# # Sett global images buffer
-# g_images = Images()
-# g_images.small_rgb = np.random.normal(size=(320, 480, 3), loc=1024, scale=64).astype(np.uint16)
-#
-# def setCurrentImages(images, image):
-#     global g_images
-#     g_images = images
-#     g_images.set(image)
-#
-# def getCurrentImages():
-#     global g_images
-#     return g_images
-
-
-def BH_op(img, kernelSize):
+def BH_op(img, kernelSize, filter=False):
     """bottom-hat transformation Filtering Approach
     A Study of Morphological Pre-Processing Approaches for Track-Before-Detect Dim Target Detection
     https://eprints.qut.edu.au/214476/1/16823.pdf
@@ -125,10 +74,21 @@ def BH_op(img, kernelSize):
         obs = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # _cmo = closing(obs, selem) - opening(obs, selem)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernelSize)
-    _bh = cv2.morphologyEx(obs, cv2.MORPH_CLOSE, kernel) - obs
-    return _bh
+    # blackhat = cv2.morphologyEx(obs, cv2.MORPH_CLOSE, kernel) - obs
+    blackhat = cv2.morphologyEx(obs, cv2.MORPH_BLACKHAT, kernel)
+    if filter:
+        # kernel = np.array([[-1,-1,-1],[-1,8,-1],[-1,-1,-1]], np.int8)
+        kernel = np.array([[0,-1,0],[-1,4,-1],[0,-1,0]], np.int8)
+        # kernel = np.array([[0,0,-1,0,0],[0,0,-1,0,0], [-1,-1,8,-1,-1], [0,0,-1,0,0], [0,0,-1,0,0]], np.int8)        
+        blackhat = cv2.filter2D(blackhat,-1,kernel)   
+        # blackhat = cv2.filter2D(blackhat,-1,kernel)  
+        # blackhat = cv2.filter2D(blackhat,-1,kernel) 
+        # kernel = cv2.getGaussianKernel(5, 1, cv2.CV_32F)
+        # blackhat = cv2.sepFilter2D(blackhat,-1,kernel,kernel)
 
-def TH_op(img, kernelSize):
+    return blackhat
+
+def TH_op(img, kernelSize, shape=cv2.MORPH_RECT):
     """top-hat transformation Filtering Approach
     A Study of Morphological Pre-Processing Approaches for Track-Before-Detect Dim Target Detection
     https://eprints.qut.edu.au/214476/1/16823.pdf
@@ -139,9 +99,10 @@ def TH_op(img, kernelSize):
         # observation is gray image
         obs = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # _cmo = closing(obs, selem) - opening(obs, selem)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernelSize)
-    _bh = obs - cv2.morphologyEx(obs, cv2.MORPH_OPEN, kernel)
-    return _bh
+    kernel = cv2.getStructuringElement(shape, kernelSize)
+    # tophat = obs - cv2.morphologyEx(obs, cv2.MORPH_OPEN, kernel)
+    tophat = cv2.morphologyEx(obs, cv2.MORPH_TOPHAT, kernel)
+    return tophat
 
 def CMO_op(img, kernelSize):
     """Close-Minus-Open Filtering Approach
@@ -157,6 +118,27 @@ def CMO_op(img, kernelSize):
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernelSize)
     _cmo = cv2.morphologyEx(obs, cv2.MORPH_CLOSE, kernel) - cv2.morphologyEx(obs, cv2.MORPH_OPEN, kernel)
     return _cmo
+
+# def DOT_op(img, kernelSize):
+#     """Close-Minus-Open Filtering Approach
+#     A Study of Morphological Pre-Processing Approaches for Track-Before-Detect Dim Target Detection
+#     https://eprints.qut.edu.au/214476/1/16823.pdf
+#     """
+#     if img.ndim == 2:
+#         obs = img
+#     else:
+#         # observation is gray image
+#         obs = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+#     # _cmo = closing(obs, selem) - opening(obs, selem)
+#     # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernelSize)
+#     kernel =  np.array([[0, 0, 0],
+#                         [0, 1, 0],
+#                         [0, 0, 0]], dtype='uint8')
+#     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))
+#     opening = cv2.morphologyEx(obs, cv2.MORPH_OPEN, kernel, iterations=1)
+#     # _cmo = cv2.morphologyEx(obs, cv2.MORPH_CLOSE, kernel) - cv2.morphologyEx(obs, cv2.MORPH_OPEN, kernel)
+#     return opening
+
 
 def old_max_pool(mat, K, L):
     M, N = mat.shape
@@ -533,24 +515,26 @@ def putText(img, text, row=30, col=10, fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontSc
 
 
 
-def cv2_img_show(name, img, width=None, height=None, flags=None, mode='RGB'):
+def cv2_img_show(name, img, width=None, height=None, flags=None, mode='RGB', normalise=False):
     """ show image in a cv2 namedwindow, you can set the width or height"""
     img = img.astype('uint8')
-    try:
-        cv2_img_show.count += 1
-    except AttributeError:  # will be triggered if this function ahs no property count
-        # on first call set all this
-        cv2_img_show.count = 0
+    # try:
+    if not hasattr(cv2_img_show, 'names'):
+        cv2_img_show.names = []
+    if not name in cv2_img_show.names:
+        cv2.namedWindow(name, flags)
+        cv2_img_show.names.append(name)
         cv2.namedWindow(name, flags)
         # setting fullscreen make this show on front
         cv2.setWindowProperty(name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.setWindowProperty(name, cv2.WND_PROP_FULLSCREEN, flags)
-        cv2.imshow(name, img)
-        # cv2.setMouseCallback(name, _mouse_events)
+
 
     if mode=='RGB' and img.ndim == 3:
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     img = resize(img, width=width, height=height)
+    if normalise:
+        img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX) # normalise to 0-255
     cv2.imshow(name, img)
 
 def overlay_mask( image, mask, color=(255,255,0), alpha=0.4):

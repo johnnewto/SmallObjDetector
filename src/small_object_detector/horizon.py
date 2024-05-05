@@ -5,7 +5,7 @@ import cv2 as cv2
 import numpy as np
 
 from imutils import resize
-# from image_utils import cv2_img_show
+from .image_utils import cv2_img_show
 import time, sys
 
 if sys.platform == "win32":

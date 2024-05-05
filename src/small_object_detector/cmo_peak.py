@@ -7,7 +7,8 @@ import numpy as np
 from skimage.feature.peak import peak_local_max
 
 from .g_images import *
-from .image_utils import BH_op, get_tile
+from .image_utils import BH_op, TH_op, CMO_op, get_tile
+from .image_utils import resize, putText, cv2_img_show, putlabel, overlay_mask, draw_bboxes
 
 try:
     # optional use of torch as its big to install
@@ -36,7 +37,8 @@ class CMO_Peak():
                  peak_min_distance=10,
                  num_peaks=10,
                  maxpool=12,
-                 CMO_kernalsize=3,
+                 morph_kernalsize=3,
+                 morph_op='BH',
                  track_boxsize=(160, 80),
                  bboxsize=40,
                  draw_bboxes=True,
@@ -64,7 +66,8 @@ class CMO_Peak():
         self.peak_min_distance = peak_min_distance
         self.num_peaks = num_peaks
         self.maxpool = maxpool
-        self.CMO_kernalsize = CMO_kernalsize
+        self.morph_kernalsize = morph_kernalsize
+        self.morph_op = morph_op
         self.bboxsize = bboxsize
 
 
@@ -90,6 +93,29 @@ class CMO_Peak():
         self.maxpool = maxpool
         getGImages().maxpool = self.maxpool
         print(f'Setting maxpool = {self.maxpool}')
+
+
+    def small_objects(self, morph_op:typ.Union[str, None] = None):
+        """ morph_op is 'CMO', 'BH' or 'TH' 
+            A Study of Morphological Pre-Processing Approaches for Track-Before-Detect Dim Target Detection
+            https://eprints.qut.edu.au/214476/1/16823.pdf
+        """
+
+        if morph_op is None:
+            morph_op = self.morph_op
+
+        images = getGImages()
+        if morph_op == 'CMO':
+            images.cmo = CMO_op(images.minpool, (self.morph_kernalsize, self.morph_kernalsize))
+        elif morph_op == 'BH':
+            images.cmo = BH_op(images.minpool, (self.morph_kernalsize, self.morph_kernalsize))
+        elif morph_op == 'BH+filter':
+            images.cmo = BH_op(images.minpool, (self.morph_kernalsize, self.morph_kernalsize), filter)
+        elif morph_op == 'TH':
+            images.cmo = TH_op(images.minpool, (self.morph_kernalsize, self.morph_kernalsize))
+
+        images.cmo[images.mask > 0] = 0   
+
 
     def align(self):
         """
@@ -169,7 +195,7 @@ class CMO_Peak():
             bs = self.bboxsize
             r, c = r * self.maxpool, c * self.maxpool
             img = get_tile(getGImages().full_rgb, (r - bs, c - bs), (bs * 2, bs * 2))
-            fullres_cmo = BH_op(img, (self.CMO_kernalsize * 2 + 1, self.CMO_kernalsize * 2 + 1))
+            fullres_cmo = BH_op(img, (self.morph_kernalsize * 2 + 1, self.morph_kernalsize * 2 + 1))
             (_r, _c) = np.unravel_index(fullres_cmo.argmax(), fullres_cmo.shape)
             r, c = r - bs + _r, c - bs + _c
 
@@ -283,7 +309,7 @@ class CMO_Peak():
         return  bbwhs, confidences, class_ids
 
 
-    def draw_bboxes(self, image, bboxes, confidences, class_ids, display_scale=None, text=True, thickness=6, alpha:typ.Union[float, None]=0.3):
+    def old_draw_bboxes(self, image, bboxes, confidences, class_ids, display_scale=None, text=True, thickness=6, alpha:typ.Union[float, None]=0.3):
         """
         Draw the bounding boxes about detected objects in the image.
 
@@ -338,7 +364,23 @@ class CMO_Peak():
             cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0, image)
         return image
 
+    def display_results(self, image, alpha=0.3):
 
+        disp_image = overlay_mask(image, getGImages().mask, alpha=alpha)
+        disp_image = draw_bboxes(disp_image, self.bbwhs, self.pks, text=True, thickness=8, alpha=alpha)
+        for count, tile in enumerate (self.fullres_img_tile_lst):
+            # put label count in left top corner
+            clr = (255, 0, 0) if count < 5 else (0,255,0) if count < 10 else (0, 0, 255)  # in order red, green, blue
+            # cv2.putText(tile, str(count), (0, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, clr, 1)
+            putlabel(tile, f'{count}', (0,10), fontScale=0.4, color=clr, thickness=1)
+        try:
+            tile_img = np.hstack(self.fullres_img_tile_lst)
+            tile_img = resize(tile_img, width=image.shape[1], inter=cv2.INTER_NEAREST)
+            disp_image = np.vstack([tile_img, disp_image])
+        except Exception as e:
+            logger.error(e)
+                                                    
+        return disp_image
         # for bb, conf, cid in zip(bboxes, confidences, class_ids):
         #     clr = [int(c) for c in self.bbox_colors[cid]]
         #     cv.rectangle(image, (bb[0], bb[1]), (bb[0] + bb[2], bb[1] + bb[3]), clr, 1)

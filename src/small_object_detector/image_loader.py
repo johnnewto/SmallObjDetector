@@ -18,7 +18,7 @@ logging.basicConfig(format='%(asctime)-8s,%(msecs)-3d %(levelname)5s [%(filename
 logger = logging.getLogger(__name__)
 
 
-class _ImageLoader:
+class ImageLoader:
     extensions: tuple = (".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".gif",)
 
     def __init__(self, path: str, mode: str = "BGR"):
@@ -69,7 +69,7 @@ class _ImageLoader:
         pass
 
 
-class CV2Loader(_ImageLoader):
+class CV2Loader(ImageLoader):
     def __next__(self):
         start = timer()
         path = self.dataset[self.frame_num]  # get image path by index from the dataset
@@ -83,7 +83,7 @@ class CV2Loader(_ImageLoader):
         return image, full_time
 
 
-class PILLoader(_ImageLoader):
+class PILLoader(ImageLoader):
     def __next__(self):
         start = timer()
         path = self.dataset[self.frame_num]  # get image path by index from the dataset
@@ -130,7 +130,7 @@ class PILLoader(_ImageLoader):
 #         return image, full_time
 #
 INTHREAD = True
-class ImageLoader(_ImageLoader):
+class ImageLoader(ImageLoader):
     def __init__(self, path, mode='RGB', cvtgray=True, start_frame=None, **kwargs):
         super(ImageLoader, self).__init__(path)
         self.jpeg_reader = TurboJPEG()  # create TurboJPEG object for image reading

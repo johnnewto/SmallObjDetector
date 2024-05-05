@@ -11,15 +11,15 @@ Functions:
 """
 
 import logging
-import os
 import time
 import cv2
 from pathlib import Path
 import numpy as np
-import utils.image_loader as il
-from utils.cmo_peak import CMO_Peak
-from utils.g_images import setGImages, getGImages
-from utils.image_utils import resize, putText, cv2_img_show, putlabel, overlay_mask, draw_bboxes, VideoWriter
+# import small_object_detector.image_loader as il
+from small_object_detector import ImageLoader
+from small_object_detector import CMO_Peak
+from small_object_detector import setGImages, getGImages
+from small_object_detector import resize, putText, cv2_img_show, VideoWriter
 # from utils.show_images import  putText, cv2_img_show
 
 # import typing as typ
@@ -29,26 +29,23 @@ logging.basicConfig(format='%(asctime)-8s,%(msecs)-3d %(levelname)5s [%(filename
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-
-
-
 class Main:
-    def __init__(self, _loader, model, tracker, display_width=2000, record=False, path='', qgc=None):
+    def __init__(self, _loader, detecter, tracker, display_width=2000, record=False, path='', qgc=None):
         self.loader = _loader
-        self.model: CMO_Peak = model
+        self.detecter: CMO_Peak = detecter
         self.tracker = tracker
         self.display_width = display_width
         self.record = record
         self.do_run = True
         self.path = path
 
-        self.model.set_max_pool(12)
+        self.detecter.set_max_pool(12)
         self.heading_angle = 0.0
 
 
 
     def run(self, wait_timeout=10):
+        from small_object_detector.image_utils import BH_op, TH_op, CMO_op
         """
             Run the main tracking loop.
 
@@ -65,8 +62,9 @@ class Main:
         cv2.setWindowProperty(WindowName, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
 
         if self.record:
-            video = VideoWriter(self.path + '.mov', fps=5.0)
-            print(f"Recording to {self.path}.mov")
+            filename = f"{self.path}-{self.detecter.morph_op}.mp4"
+            video = VideoWriter(filename, fps=5.0)
+            print(f"Recording to {filename}")
 
 
         first_run = True
@@ -81,12 +79,19 @@ class Main:
                         image = cv2.cvtColor(image, cv2.COLOR_BAYER_BG2RGB)
                     setGImages(image)
                     getGImages().mask_sky()
-                    getGImages().small_objects()
+                    # cv2_img_show('find_sky_2-mask', getGImages().mask, flags=cv2.WINDOW_NORMAL)
 
-                    self.model.detect()
-                    disp_image = self.display_results(image)
+         
+
+                    self.detecter.small_objects()
+                    cv2_img_show(f'{self.detecter.morph_op}', getGImages().cmo, flags=cv2.WINDOW_NORMAL, normalise=True)    # f'{self.detecter.morph_op}'
  
-                    putText(disp_image, f'Frame# = {frameNum}, {filename}', row=170, fontScale=0.5)
+                    self.detecter.detect()
+                    height, width, _ = image.shape
+                    putText(image, f'Frame# = {frameNum}, {filename}', row=height-80, fontScale=0.5)
+                    disp_image = self.detecter.display_results(image)
+ 
+
 
                     if self.record:
                         img = resize(disp_image, width=3000)  # not sure why this is needed to stop black screen video
@@ -137,51 +142,6 @@ class Main:
 
         time.sleep(0.5)
 
-        # """
-        # Put text on the image with a black background.
-
-        # Args:
-        #     img (numpy.ndarray): The image.
-        #     text (str): The text to put on the image.
-        #     position (tuple): The position where the text should be put.
-        #     fontFace (int): The font type. Default is cv2.FONT_HERSHEY_SIMPLEX.
-        #     fontScale (float): Font scale. Default is 1.
-        #     color (tuple): Font color. Default is white.
-        #     thickness (int): Thickness of the lines used to draw a text. Default is 2.
-
-        # Returns:
-        #     numpy.ndarray: The image with the text.
-        # """
-        # # Calculate the width and height of the text
-        # (text_width, text_height), baseLine = cv2.getTextSize(text, fontFace, fontScale, thickness)
-        # # Determine the y-coordinate for the text
-        # y_text = max(position[1], text_height)
-        # # Draw a filled rectangle on the image at the location where the text will be placed
-        # cv2.rectangle(img, (position[0], y_text - text_height), (position[0] + text_width, y_text + baseLine), (0, 0, 0), cv2.FILLED)
-        # # Draw the text on the image at the specified location
-        # cv2.putText(img, text, (position[0], y_text+text_height//4), fontFace, fontScale, color, thickness, cv2.LINE_AA)
-
-        # return img
-
-    def display_results(self, image, alpha=0.3):
-
-        disp_image = overlay_mask(image, getGImages().mask, alpha=alpha)
-        disp_image = draw_bboxes(disp_image, self.model.bbwhs, self.model.pks, text=True, thickness=8, alpha=alpha)
-        for count, tile in enumerate (self.model.fullres_img_tile_lst):
-            # put label count in left top corner
-            clr = (255, 0, 0) if count < 5 else (0,255,0) if count < 10 else (0, 0, 255)  # in order red, green, blue
-            # cv2.putText(tile, str(count), (0, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, clr, 1)
-            putlabel(tile, f'{count}', (0,10), fontScale=0.4, color=clr, thickness=1)
-        try:
-            tile_img = np.hstack(self.model.fullres_img_tile_lst)
-            tile_img = resize(tile_img, width=self.display_width, inter=cv2.INTER_NEAREST)
-            disp_image = np.vstack([tile_img, disp_image])
-        except Exception as e:
-            logger.error(e)
-                                                       
-        return disp_image
-
-
 if __name__ == '__main__':
     import argparse
     """
@@ -205,14 +165,15 @@ if __name__ == '__main__':
     RECORD = args.record
 
     # home = str(Path.home())
-    _model = CMO_Peak(confidence_threshold=0.1,
+    detecter = CMO_Peak(confidence_threshold=0.1,
                       labels_path='data/imagenet_class_index.json',
                       # labels_path='/media/jn/0c013c4e-2b1c-491e-8fd8-459de5a36fd8/home/jn/data/imagenet_class_index.json',
                       expected_peak_max=60,
                       peak_min_distance=5,
                       num_peaks=10,
                       maxpool=12,
-                      CMO_kernalsize=3,
+                      morph_kernalsize=3,
+                      morph_op='BH+filter',
                       track_boxsize=(80, 160),
                       bboxsize=40,
                       draw_bboxes=True,
@@ -228,15 +189,16 @@ if __name__ == '__main__':
 
     # if data path exists use it
     path = home + '/data/maui-data/Karioitahi_09Feb2022/132MSDCF-28mm-f4'
+    # path = home + '/data/maui-data/karioitahi_13Aug2022/SonyA7C/105MSDCF'
 
     # if not os.path.exists(path):
     #     print(f"Path {path} does not exist, using local path")
     #     path = "data/Karioitahi_09Feb2022/132MSDCF-28mm-f4"
 
 
-    loader = il.ImageLoader(path + '/*.JPG', mode='RGB', cvtgray=False, start_frame=0)
+    loader = ImageLoader(path + '/*.JPG', mode='RGB', cvtgray=False, start_frame=0)
   
-    main = Main(loader, _model, _tracker, display_width=6000, record=RECORD, path=path)
+    main = Main(loader, detecter, _tracker, display_width=6000, record=RECORD, path=path)
 
     main.run(wait_timeout=0)
 

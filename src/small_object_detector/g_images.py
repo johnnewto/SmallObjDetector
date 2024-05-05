@@ -3,8 +3,8 @@ __all__ = ['setGImages', 'getGImages', 'Images']
 import numpy as np
 from imutils import resize
 
-from utils.horizon import *
-from utils.image_utils import min_pool, BH_op
+from .horizon import *
+from .image_utils import min_pool, BH_op
 import time, sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,13 +33,13 @@ def get_project_root() -> Path:
 @dataclass
 class Images:
     maxpool: int = 12
-    CMO_kernalsize = 3
+    # CMO_kernalsize = 3
     full_rgb: np.array = None
-    small_rgb: np.array = None
+    # small_rgb: np.array = None
     full_gray: np.array = None
     small_gray: np.array = None
     minpool: np.array = None
-    minpool_f: np.array = None
+    # minpool_f: np.array = None
     last_minpool_f: np.array = None
     cmo: np.array = None
     mask: np.array = None
@@ -55,24 +55,16 @@ class Images:
 
         self.minpool = min_pool(self.full_gray, self.maxpool, self.maxpool)
         small_gray = resize(self.full_gray, width=self.minpool.shape[1])
-        self.small_rgb = resize(self.full_rgb, width=self.minpool.shape[1])
+        # self.small_rgb = resize(self.full_rgb, width=self.minpool.shape[1])
         self.small_gray = np.zeros_like(self.minpool, dtype='uint8')
         n_rows = min(self.minpool.shape[0], small_gray.shape[0])
         self.small_gray[:n_rows, :] = small_gray[:n_rows, :]
         # self.small_gray = small_gray
-        self.minpool_f = np.float32(self.minpool)
+        # self.minpool_f = np.float32(self.minpool)
 
     def mask_sky(self):
         self.mask = find_sky_2(self.minpool, threshold=80, kernal_size=7)
 
-    def small_objects(self):
-        """ here not really using CMO approach but just BH operation
-            bottom-hat transformation Filtering Approach
-            A Study of Morphological Pre-Processing Approaches for Track-Before-Detect Dim Target Detection
-            https://eprints.qut.edu.au/214476/1/16823.pdf
-        """
-        self.cmo = BH_op(self.minpool, (self.CMO_kernalsize, self.CMO_kernalsize))
-        self.cmo[self.mask > 0] = 0
 
 
 # Set global images buffer

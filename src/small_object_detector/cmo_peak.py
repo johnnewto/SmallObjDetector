@@ -208,7 +208,11 @@ class CMO_Peak():
         
             self.pks.append((r, c))
             self.pk_vals.append(pk_val)
+
+            # convert bbwh to yolo format
+            bbwh = [bbwh[0] / self.width, bbwh[1] / self.height, bbwh[2] / self.width, bbwh[3] / self.height]
             self.bbwhs.append(bbwh)
+
 
         logger.info(f'Found {len(self.pks)} peaks')
         # if length tile list < self.num_peakspad with zeros

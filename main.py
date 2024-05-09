@@ -14,8 +14,6 @@ import logging
 import time
 import cv2
 from pathlib import Path
-import numpy as np
-# import small_object_detector.image_loader as il
 from small_object_detector import ImageLoader
 from small_object_detector import CMO_Peak
 from small_object_detector import setGImages, getGImages
@@ -45,7 +43,6 @@ class Main:
 
 
     def run(self, wait_timeout=10):
-        from small_object_detector.image_utils import BH_op, TH_op, CMO_op
         """
             Run the main tracking loop.
 

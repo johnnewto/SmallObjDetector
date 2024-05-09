@@ -24,6 +24,7 @@ from .g_images import setGImages as setGImages
 from .g_images import getGImages as getGImages
 
 from .image_utils import resize as resize
+from .image_utils import get_tile as get_tile
 from .image_utils import putText as putText
 from .image_utils import cv2_img_show as cv2_img_show
 from .image_utils import putlabel as putlabel

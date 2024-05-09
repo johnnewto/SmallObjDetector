@@ -181,7 +181,12 @@ def get_tile(img:np.ndarray, pos, tile_shape, copy=False):
 
     else:
         if img.ndim == 3:
-            tile = np.zeros((*tile_shape, 3), 'uint8')
+            if img.shape[2] == 3:
+                tile = np.zeros((*tile_shape, 3), 'uint8')
+            elif img.shape[2] == 4:
+                tile = np.zeros((*tile_shape, 4), 'uint8')
+            else:
+                print("error")  # FIXME add error handling
         else:
             tile = np.zeros(tile_shape, 'uint8')
         # Calculate tile slice positions
@@ -192,8 +197,10 @@ def get_tile(img:np.ndarray, pos, tile_shape, copy=False):
         pos = np.clip(pos, a_min=0, a_max=img_shape)
         end = np.clip(end, a_min=0, a_max=img_shape)
         img_slices = (slice(low, high) for low, high in zip(pos, end))
-
-        tile[tuple(crop_slices)] = img[tuple(img_slices)]
+        try:
+            tile[tuple(crop_slices)] = img[tuple(img_slices)]
+        except Exception as e:
+            print(e)  # FIXME add error handling
 
     if not np.all(tile.shape[:2] == tile_shape) :
         print("error")
@@ -551,6 +558,8 @@ def overlay_mask( image, mask, color=(255,255,0), alpha=0.4):
     # convert to rgb color
     mask_rgb = cv2.cvtColor(mask, cv2.COLOR_GRAY2RGB)
     mask_rgb = np.where(mask_rgb == [255, 255, 255], np.uint8(color), mask_rgb)
+    if image.shape[2] == 4:
+        mask_rgb = cv2.cvtColor(mask_rgb, cv2.COLOR_RGB2RGBA)
 
     # resize mask to image size
     mask_rgb = cv2.resize(mask_rgb, (image.shape[1], image.shape[0]))

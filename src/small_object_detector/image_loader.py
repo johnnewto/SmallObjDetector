@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 from PIL import Image
 import glob
+import os
 from imutils import resize
 from imutils.video import FPS
 
@@ -21,20 +22,27 @@ logger = logging.getLogger(__name__)
 class ImageLoader:
     extensions: tuple = (".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".gif",)
 
-    def __init__(self, path: str, mode: str = "BGR"):
-        self.open_path(path)
+    def __init__(self, directory: str, names=("*.jpg", "*.JPG"), mode: str = "BGR"):
+        self.open_path(directory,names)
+
         self.mode = mode
 
-    def open_path(self, path):
-        self.path = path
-        self.dataset = self.parse_input(self.path)
+    def open_path(self, directory, names):
+        self.directory = directory
+        self.dataset = self.parse_input(self.directory, names)
         self.dataset.sort()
         self.frame_num = 0
         self._direction_fwd = True
         self.restep = False
 
-    def parse_input(self, path):
-        files = glob.glob(self.path)
+    def parse_input(self, directory, names):
+
+        files = []
+        for name in names:
+            # make a path to the files make sure there is a / between path and name
+
+
+            files += glob.glob(os.path.join(directory, name))
         if len(files) <= 1:
             print(f"No files found in {self.path}")
             return []
@@ -131,10 +139,9 @@ class PILLoader(ImageLoader):
 #
 INTHREAD = True
 class ImageLoader(ImageLoader):
-    def __init__(self, path, mode='RGB', cvtgray=True, start_frame=None, **kwargs):
-        super(ImageLoader, self).__init__(path)
+    def __init__(self, directory, names, mode='RGB', cvtgray=True, start_frame=None, **kwargs):
+        super(ImageLoader, self).__init__(directory, names, mode=mode)
         self.jpeg_reader = TurboJPEG()  # create TurboJPEG object for image reading
-        self.mode = mode
         self.cvtgray = cvtgray
 
         if start_frame is None:

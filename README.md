@@ -37,22 +37,18 @@ pip install git+file:///home/$USER/repos/small-object-detector
 ### Usage
 
 ``` sh
-python main.py
-```
-
-Recording
-``` sh
-python main.py -h
-usage: main.py [-h] [-r]
+sodrun -h
+usage: sodrun [-h] [-r] [-d DIR]
 
 Tracking of small objects in video frames
 
 optional arguments:
-  -h, --help    show this help message and exit
-  -r, --record  Enable recording
+  -h, --help         show this help message and exit
+  -r, --record       Enable recording
+  -d DIR, --dir DIR  directory to view
 ```
 
-Runs small object detections on a small image [data set](https://github.com/johnnewto/MauiTracker/tree/main/data/Karioitahi_09Feb2022/132MSDCF-28mm-f4)
+IF no directory is given it runs small object detections on a small image [data set](https://github.com/johnnewto/MauiTracker/tree/main/data/Karioitahi_09Feb2022/132MSDCF-28mm-f4)
 
 With one of the windows in focus press spacebar to step, g to go continuously, d to change direction and q to quit
 

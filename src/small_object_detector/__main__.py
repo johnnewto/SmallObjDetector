@@ -3,10 +3,10 @@ This file contains the main code for the MauiTracker application.
 The code includes classes and functions for processing and analyzing video frames.
 
 Classes:
-- Main: Represents the main class for processing and analyzing video frames.
+- Viewer: Represents the class for processing and analyzing video frames.
 
 Functions:
-- run: Runs the video processing and analysis.
+- __call__: Runs the video processing and analysis.
 
 """
 
@@ -27,7 +27,7 @@ logging.basicConfig(format='%(asctime)-8s,%(msecs)-3d %(levelname)5s [%(filename
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class Main:
+class Viewer:
     def __init__(self, _loader, detecter, tracker, display_width=2000, record=False, path='', qgc=None):
         self.loader = _loader
         self.detecter: CMO_Peak = detecter
@@ -42,7 +42,7 @@ class Main:
 
 
 
-    def run(self, wait_timeout=10):
+    def __call__(self, wait_timeout=10):
         """
             Run the main tracking loop.
 
@@ -139,20 +139,15 @@ class Main:
 
         time.sleep(0.5)
 
-if __name__ == '__main__':
+
+
+
+def main():
     import argparse
     """
 
     """
 
-    # RECORD = False
-    STOP_FRAME = None
-
-    CONFIDENCE_THRESHOLD = 0.5
-    NMS_THRESHOLD = 0.2
-    DRAW_BOUNDING_BOXES = True
-
-    
     _tracker = None
 
     parser = argparse.ArgumentParser(description="Tracking of small objects in video frames")
@@ -168,7 +163,7 @@ if __name__ == '__main__':
                       # labels_path='/media/jn/0c013c4e-2b1c-491e-8fd8-459de5a36fd8/home/jn/data/imagenet_class_index.json',
                       expected_peak_max=60,
                       peak_min_distance=5,
-                      num_peaks=10,
+                      num_peaks=5,
                       maxpool=12,
                       morph_kernalsize=3,
                       morph_op='BH+filter',
@@ -188,18 +183,21 @@ if __name__ == '__main__':
     else:
         home = str(Path.home())
         # if data path exists use it
-        path = home + '/data/maui-data/Karioitahi_09Feb2022/132MSDCF-28mm-f4'
+        path = home + '/data/maui-data/Karioitahi_09Feb2022/132MSDCF-28mm-f4/'
         # path = home + '/data/maui-data/karioitahi_13Aug2022/SonyA7C/105MSDCF'
 
         # if not os.path.exists(path):
         #     print(f"Path {path} does not exist, using local path")
         #     path = "data/Karioitahi_09Feb2022/132MSDCF-28mm-f4"
 
-
-    loader = ImageLoader(path + '/*.JPG', mode='RGB', cvtgray=False, start_frame=0)
+# 
+    loader = ImageLoader(path, names=('*.jpg','*.JPG'), mode='RGB', cvtgray=False, start_frame=0)
   
-    main = Main(loader, detecter, _tracker, display_width=6000, record=RECORD, path=path)
+    view = Viewer(loader, detecter, _tracker, display_width=6000, record=RECORD, path=path)
 
-    main.run(wait_timeout=0)
+    view(wait_timeout=0)
 
 
+if __name__ == '__main__':
+
+    main()

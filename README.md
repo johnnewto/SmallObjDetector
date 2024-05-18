@@ -29,8 +29,8 @@ pip install -e .[dev]
 Bump version using 
 ``` sh 
 (venv) $ bumpver update --minor
-INFO    - Old Version: 0.0.0
-INFO    - New Version: 1.1.0
+INFO    - Old Version: 0.0.1
+INFO    - New Version: 0.0.2
 ```
 
 #### Install libturbojpeg

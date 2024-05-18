@@ -12,7 +12,7 @@ Functions:
 Version:
 --------
 
-- small-object-detector v0.0.1
+- small-object-detector v0.0.2
 """
 
 

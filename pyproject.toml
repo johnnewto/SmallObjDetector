@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "small_object_detector"
-version = "0.0.1"
+version = "0.0.2"
 description = "Small Object Detector "
 readme = "README.md"
 authors = [{ name = "John Newton", email = "xyz@abc.com" }]
@@ -43,7 +43,7 @@ documentation = "https://github.com/johnnewto/SmallObjDetector/readme.md"
 
 
 [tool.bumpver]
-current_version = "0.0.1"
+current_version = "0.0.2"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message  = "bump version {old_version} -> {new_version}"
 commit          = true

@@ -33,4 +33,4 @@ from .image_utils import draw_bboxes as draw_bboxes
 from .image_utils import VideoWriter as VideoWriter
 
 # Version of package
-__version__ = "0.0.1"
+__version__ = "0.0.2"

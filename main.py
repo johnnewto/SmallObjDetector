@@ -157,6 +157,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="Tracking of small objects in video frames")
     parser.add_argument('-r', '--record', action='store_true', help='Enable recording', default=False)
+    parser.add_argument('-d', '--dir', type=str, help='directory to view', default=None)
     args = parser.parse_args()
 
     RECORD = args.record
@@ -182,15 +183,17 @@ if __name__ == '__main__':
     # (_r, _c) = (center[0] - rows // 2, center[1] - cols // 2)
     # crop = [_r, _r + rows, _c, _c + cols]
     # # crop = None
-    home = str(Path.home())
+    if args.dir:
+        path = args.dir
+    else:
+        home = str(Path.home())
+        # if data path exists use it
+        path = home + '/data/maui-data/Karioitahi_09Feb2022/132MSDCF-28mm-f4'
+        # path = home + '/data/maui-data/karioitahi_13Aug2022/SonyA7C/105MSDCF'
 
-    # if data path exists use it
-    path = home + '/data/maui-data/Karioitahi_09Feb2022/132MSDCF-28mm-f4'
-    # path = home + '/data/maui-data/karioitahi_13Aug2022/SonyA7C/105MSDCF'
-
-    # if not os.path.exists(path):
-    #     print(f"Path {path} does not exist, using local path")
-    #     path = "data/Karioitahi_09Feb2022/132MSDCF-28mm-f4"
+        # if not os.path.exists(path):
+        #     print(f"Path {path} does not exist, using local path")
+        #     path = "data/Karioitahi_09Feb2022/132MSDCF-28mm-f4"
 
 
     loader = ImageLoader(path + '/*.JPG', mode='RGB', cvtgray=False, start_frame=0)

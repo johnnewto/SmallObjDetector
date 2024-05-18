@@ -581,12 +581,17 @@ def draw_bboxes( image, bboxes, confidences, text=True, thickness=6, alpha:typ.U
     # support for alpha blending overlay
     overlay = image.copy() if alpha is not None else image    
     count = 0
+    height, width = image.shape[:2]
     for bb in bboxes:
+        l, t, w, h = bb
         clr = (255, 0, 0) if count < 5 else (0,255,0) if count < 10 else (0, 0, 255) # in order red, green, blue
-        cv2.rectangle(overlay, (bb[0], bb[1] ), (bb[0] + bb[2], bb[1] + bb[3]), clr, thickness)
+        # convert to int and mult by width and height
+        l, t, w, h = int(l*width), int(t*height), int(w*width), int(h*height)
+
+        cv2.rectangle(overlay, (l, t ), (l+w, t+h), clr, thickness)
 
         if text:
-            putlabel(overlay, f'{count}', (bb[0], bb[1]-0), fontScale=1.0, color=clr, thickness=2)
+            putlabel(overlay, f'{count}', (l,t), fontScale=1.0, color=clr, thickness=2)
         count += 1
     
     if alpha is not None:
@@ -661,7 +666,7 @@ class VideoWriter:
             print(f'Error: {e} not found')
 
 if __name__ == '__main__':
-
+    from skimage.measure import block_reduce
 
     (rows, cols) = (2000, 3000)
     center = (2750, 4350)
@@ -676,6 +681,15 @@ if __name__ == '__main__':
         # img = resize(img, width=500)
         putText(img, f'Frame = {i}, fontScale=0.5')
         cv2.imshow('image',  img)
+
+        start_time = default_timer()
+        minpool = min_pool(img, 12, 12)
+        print(f'minpool elapsed time {default_timer() - start_time}')
+        start_time = default_timer()
+        minpool = block_reduce(img, block_size=(12, 12), func=np.median)
+        print(f'block_reduce elapsed time {default_timer() - start_time}')
+
+        cv2.imshow('minpool',  minpool)
         k = cv2.waitKey(wait_timeout)
         if k == ord('q') or k == 27:
             break

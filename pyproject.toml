@@ -56,7 +56,7 @@ push            = false
         'version = "{version}"',
     ]
     "src/small_object_detector/__init__.py" = ["{version}"]
-    "src/small_object_detector/__main__.py" = ["- realpython-reader v{version}"]
+    "src/small_object_detector/__main__.py" = ["- small-object-detector v{version}"]
 
 [tool.isort]
 profile                   = "black"

@@ -8,7 +8,13 @@ Classes:
 Functions:
 - __call__: Runs the video processing and analysis.
 
+
+Version:
+--------
+
+- small-object-detector v0.0.1
 """
+
 
 import logging
 import time

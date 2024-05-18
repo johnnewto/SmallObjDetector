@@ -22,6 +22,17 @@ pip install --upgrade pip
 pip install -e .
 ```
 
+if developing you can install dev packages 
+``` sh
+pip install -e .[dev]
+```
+Bump version using 
+``` sh 
+(venv) $ bumpver update --minor
+INFO    - Old Version: 0.0.0
+INFO    - New Version: 1.1.0
+```
+
 #### Install libturbojpeg
 
 ```bash

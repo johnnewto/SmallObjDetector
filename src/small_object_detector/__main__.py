@@ -71,70 +71,79 @@ class Viewer:
 
 
         first_run = True
-        while self.do_run:
-            k = -1
-            for (image, filename), frameNum, grabbed in iter(self.loader):
-
-                if grabbed or first_run:
-                    first_run = False
-                    print(f"frame {frameNum} : {filename}  {grabbed}")
-                    if len(image.shape) == 2:
-                        image = cv2.cvtColor(image, cv2.COLOR_BAYER_BG2RGB)
-                    setGImages(image)
-                    getGImages().mask_sky()
-                    # cv2_img_show('find_sky_2-mask', getGImages().mask, flags=cv2.WINDOW_NORMAL)
-
-         
-
-                    self.detecter.small_objects()
-                    cv2_img_show(f'{self.detecter.morph_op}', getGImages().cmo, flags=cv2.WINDOW_NORMAL, normalise=True)    # f'{self.detecter.morph_op}'
+  
  
-                    self.detecter.detect()
-                    height, width, _ = image.shape
-                    putText(image, f'Frame# = {frameNum}, {filename}', row=height-80, fontScale=0.5)
-                    disp_image = self.detecter.display_results(image)
- 
+        k = -1
+        for (image, filename), frameNum, grabbed in iter(self.loader):
+
+            if grabbed or first_run:
+                first_run = False
+                print(f"frame {frameNum} : {filename}  {grabbed}")
+                if len(image.shape) == 2:
+                    image = cv2.cvtColor(image, cv2.COLOR_BAYER_BG2RGB)
+                setGImages(image)
+                getGImages().mask_sky()
+                # cv2_img_show('find_sky_2-mask', getGImages().mask, flags=cv2.WINDOW_NORMAL)
+
+        
+
+                self.detecter.small_objects()
+                cv2_img_show(f'{self.detecter.morph_op}', getGImages().cmo, flags=cv2.WINDOW_NORMAL, normalise=True)    # f'{self.detecter.morph_op}'
+
+                self.detecter.detect()
+                height, width, _ = image.shape
+                putText(image, f'Frame# = {frameNum}, {filename}', row=height-80, fontScale=0.5)
+                disp_image = self.detecter.display_results(image)
 
 
-                    if self.record:
-                        img = resize(disp_image, width=3000)  # not sure why this is needed to stop black screen video
-                        for i in range(2):  # to allow easier pause and frame seeking in video play
-                            video.add(img)
+                if self.record:
+                    img = resize(disp_image, width=3000)  # not sure why this is needed to stop black screen video
+                    for i in range(2):  # to allow easier pause and frame seeking in video play
+                        video.add(img)
 
-                cv2_img_show(WindowName, disp_image)
-                # try:
-                #     cv2_img_show('fullres_tiles', vstack(
-                #         [np.hstack(self.model.fullres_img_tile_lst), np.hstack(self.model.fullres_cmo_tile_lst)]),
-                #                  height=200)
+            cv2_img_show(WindowName, disp_image)
+            # try:
+            #     cv2_img_show('fullres_tiles', vstack(
+            #         [np.hstack(self.model.fullres_img_tile_lst), np.hstack(self.model.fullres_cmo_tile_lst)]),
+            #                  height=200)
 
-                #     cv2_img_show('lowres_tiles', vstack(
-                #         [np.hstack(self.model.lowres_img_tile_lst), np.hstack(self.model.lowres_cmo_tile_lst)]),
-                #                  height=200)
-                # except Exception as e:
-                #     logger.error(e)
-
-                
-    
-                if k == ord('q') or k == 27:
-                    self.do_run = False
-                    break
-                if k == ord(' '):
-                    wait_timeout = 0
-                if k == ord('g'):
-                    wait_timeout = 1
-                if k == ord('d'):
-                    # change direction
-                    wait_timeout = 0
-                    self.loader._direction_fwd = not self.loader._direction_fwd
-
-                k = cv2.waitKey(wait_timeout)
-
-            # self.loader.direction_fwd = not self.loader.direction_fwd
-            wait_timeout = 10
-
+            #     cv2_img_show('lowres_tiles', vstack(
+            #         [np.hstack(self.model.lowres_img_tile_lst), np.hstack(self.model.lowres_cmo_tile_lst)]),
+            #                  height=200)
+            # except Exception as e:
+            #     logger.error(e)
+                       
             k = cv2.waitKey(wait_timeout)
             if k == ord('q') or k == 27:
+                break    
+
+            if k == ord('q') or k == 27:
+                self.do_run = False
                 break
+            if k == ord(' '):
+                wait_timeout = 0
+            if k == ord('g'):
+                wait_timeout = 1
+            if k == ord('d'):
+                # change direction
+                wait_timeout = 0
+                self.loader._direction_fwd = not self.loader._direction_fwd
+
+            if k == ord('d'):  # increment 10 frames
+                print("increment 10 frames")
+                self.loader.frame_num = min(self.loader.frame_num + 10, self.loader.num_frames - 1)
+                print(f"frame_num = {self.loader.frame_num}")
+            if k == ord('a'):  # decrement 10 frames
+                print("decrement 10 frames")
+                self.loader.frame_num = max(self.loader.frame_num - 10, 0)
+
+            if k == ord('s'):  # increment 100 frames
+                print("increment 100 frames")
+                self.loader.frame_num = min(self.loader.frame_num + 100, self.loader.num_frames - 1)
+                print(f"frame_num = {self.loader.frame_num}")
+            if k == ord('w'):  # decrement 100 frames
+                print("decrement 100 frames")
+                self.loader.frame_num = max(self.loader.frame_num - 100, 0)
 
         if self.record:
             video.close()
@@ -145,8 +154,18 @@ class Viewer:
 
         time.sleep(0.5)
 
-
-
+    @staticmethod
+    def help():
+        print(" Tracking of small objects in video frames")
+        print("   keys: q     : quit")
+        print("         space : pause")
+        print("         g     : go")
+        print("         d     : change direction")
+        print("         d     : increment 10 frames")
+        print("         a     : decrement 10 frames")
+        print("         s     : increment 100 frames")
+        print("         w     : decrement 100 frames")
+        print("     ")
 
 def main():
     import argparse
@@ -156,9 +175,12 @@ def main():
 
     _tracker = None
 
-    parser = argparse.ArgumentParser(description="Tracking of small objects in video frames")
+    parser = argparse.ArgumentParser(description=Viewer.help())
     parser.add_argument('-r', '--record', action='store_true', help='Enable recording', default=False)
     parser.add_argument('-d', '--dir', type=str, help='directory to view', default=None)
+
+    # add Viewer.help() to parser help
+
     args = parser.parse_args()
 
     RECORD = args.record
@@ -196,7 +218,8 @@ def main():
         #     print(f"Path {path} does not exist, using local path")
         #     path = "data/Karioitahi_09Feb2022/132MSDCF-28mm-f4"
 
-# 
+    cv2.destroyAllWindows()
+
     loader = ImageLoader(path, names=('*.jpg','*.JPG'), mode='RGB', cvtgray=False, start_frame=0)
   
     view = Viewer(loader, detecter, _tracker, display_width=6000, record=RECORD, path=path)

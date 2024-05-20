@@ -34,6 +34,7 @@ class ImageLoader:
         self.frame_num = 0
         self._direction_fwd = True
         self.restep = False
+        self.num_frames = len(self.dataset)
 
     def parse_input(self, directory, names):
 
@@ -163,6 +164,7 @@ class ImageLoader(ImageLoader):
         self.fps = FPS().start()
         self._img = None
 
+
     def get_FPS(self):
         """ the the FPS of the calls """
         self.fps.stop()
@@ -183,6 +185,9 @@ class ImageLoader(ImageLoader):
 
     def _read_next_image(self, idx, sel):
         """ this is run in a thread"""
+        if idx >= len(self.dataset):
+            logger.warning("idx >= len(self.dataset)")
+            return
         with open(self.dataset[idx], "rb")  as file:
             # del self._img
             # gc.collect()
@@ -206,10 +211,17 @@ class ImageLoader(ImageLoader):
         # self.restep = False
 
         last_frame_num = self.frame_num
-        if self._direction_fwd and self.frame_num < self.__len__():
+        if self._direction_fwd:
             self.frame_num += 1
-        if not self._direction_fwd and self.frame_num >= 0:
+        if not self._direction_fwd:
             self.frame_num -= 1
+
+        # clip the frame number
+        if self.frame_num < 0:
+            self.frame_num = 0
+        if self.frame_num >= self.__len__():
+            self.frame_num = self.__len__() - 1
+
 
         # self.sample_idx += 1
         if last_frame_num != self.frame_num:
@@ -228,7 +240,14 @@ class ImageLoader(ImageLoader):
             return self.image, self.frame_num, True
 
         else:
-            raise StopIteration
+            # return blank image
+            shape = self.firstimage[0].shape
+            image = np.ones(shape, dtype=np.uint8)*125
+            cv2.putText(image, f'Frame = {self.frame_num}', (shape[0]//2, shape[1]//2), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            return (image, 0)  , self.frame_num, True
+        
+        # normally we would raise StopIteration
+            # raise StopIteration
 
 
 

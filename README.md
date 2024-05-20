@@ -28,9 +28,12 @@ pip install -e .[dev]
 ```
 Bump version using 
 ``` sh 
-(venv) $ bumpver update --minor
+(venv) $ bumpver update --patch
+INFO    - fetching tags from remote (to turn off use: -n / --no-fetch)
 INFO    - Old Version: 0.0.1
 INFO    - New Version: 0.0.2
+INFO    - git commit --message 'bump version 0.0.1 -> 0.0.2'
+INFO    - git tag --annotate 0.0.2 --message '0.0.2'
 ```
 
 #### Install libturbojpeg
@@ -49,9 +52,17 @@ pip install git+file:///home/$USER/repos/small-object-detector
 
 ``` sh
 sodrun -h
+ Tracking of small objects in video frames
+   keys: q     : quit
+         space : pause
+         g     : go
+         d     : change direction
+         d     : increment 10 frames
+         a     : decrement 10 frames
+         s     : increment 100 frames
+         w     : decrement 100 frames
+     
 usage: sodrun [-h] [-r] [-d DIR]
-
-Tracking of small objects in video frames
 
 optional arguments:
   -h, --help         show this help message and exit

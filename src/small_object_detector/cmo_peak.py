@@ -25,6 +25,7 @@ logging.basicConfig(format='%(asctime)-8s,%(msecs)-3d %(levelname)5s [%(filename
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+MAX_NUM_TILES = 5
 
 class CMO_Peak():
     """
@@ -114,7 +115,8 @@ class CMO_Peak():
         elif morph_op == 'TH':
             images.cmo = TH_op(images.minpool, (self.morph_kernalsize, self.morph_kernalsize))
 
-        images.cmo[images.mask > 0] = 0   
+        if hasattr(images, 'mask') and images.mask is not None:
+            images.cmo[images.mask > 0] = 0   
 
 
     def align(self):
@@ -169,11 +171,12 @@ class CMO_Peak():
         Returns:
             tuple: Tuple containing the peak positions and bounding boxes.
         """
+        NUM_PEAKS = 20
         threshold_abs = self.expected_peak_max * self.confidence_threshold
         _pks = peak_local_max(getGImages().cmo,
                               min_distance=self.peak_min_distance,
                               threshold_abs=threshold_abs,
-                              num_peaks=self.num_peaks)
+                              num_peaks=NUM_PEAKS)
 
         self.fullres_cmo_tile_lst = []
         self.fullres_img_tile_lst = []
@@ -185,48 +188,71 @@ class CMO_Peak():
 
         # get low res and full res peaks
         # gather all the tiles centered on the peak positions
+
+        # sort the peaks by row
+        _pks = sorted(_pks, key=lambda x: x[0])
+        # take to first self.num_peaks
+        # _pks = _pks[:self.num_peaks]
+        # _pks = _pks[:2]
+
         for (r, c) in _pks:
+            # sort value by row, 1.0 at to, and 0.5 at bottom
+            rows = getGImages().cmo.shape[0]
+            rval = 1.0 - 0.5*(r / rows)
+
             bs0 = round(self.bboxsize // 2)
             lowres_img = get_tile(getGImages().small_gray, (r - bs0, c - bs0), (self.bboxsize, self.bboxsize))
             lowres_cmo = get_tile(getGImages().cmo, (r - bs0, c - bs0), (self.bboxsize, self.bboxsize))
             self.lowres_img_tile_lst.append(lowres_img)
             self.lowres_cmo_tile_lst.append(lowres_cmo)
-     
+
             bs = self.bboxsize
             r, c = r * self.maxpool, c * self.maxpool
             img = get_tile(getGImages().full_rgb, (r - bs, c - bs), (bs * 2, bs * 2))
             fullres_cmo = BH_op(img, (self.morph_kernalsize * 2 + 1, self.morph_kernalsize * 2 + 1))
             (_r, _c) = np.unravel_index(fullres_cmo.argmax(), fullres_cmo.shape)
             r, c = r - bs + _r, c - bs + _c
+            pk_val_hi_res = fullres_cmo[bs, bs]            # peak value in full res image
+            pk_val_lowres = lowres_cmo[bs0, bs0]    # peak value in low res image
+            # ave_val = np.mean(fullres_cmo)
+            # pk_val = pk_val - ave_val
+        
+            self.pks.append((r, c, pk_val_lowres, pk_val_hi_res, rval ))
+            # self.pk_vals.append(pk_val)
 
+        # sort the peaks by low res peak value
+        self.pks = sorted(self.pks, key=lambda x: x[2]*x[4], reverse=True)
+
+        self.pks = self.pks[:self.num_peaks]
+
+        for (r, c, pk_val_hi_res, pk_val_low_res, rv) in self.pks:
             bbwh = [c - bs , r - bs, bs * 2, bs * 2]
 
             fullres_tile = get_tile(getGImages().full_rgb, (r - bs, c - bs), (bs * 2, bs * 2), copy=True) # copy so any changes to fullres_cmo_tile_lst do not affect the image
             self.fullres_cmo_tile_lst.append(fullres_cmo)  
             self.fullres_img_tile_lst.append(fullres_tile)
-            pk_val = fullres_cmo[bs, bs] 
-        
-            self.pks.append((r, c))
-            self.pk_vals.append(pk_val)
+            # pk_val = fullres_cmo[bs, bs] 
+            # self.pks.append((r, c))
+            # self.pk_vals.append(pk_val)
 
             # convert bbwh to yolo format
             bbwh = [bbwh[0] / self.width, bbwh[1] / self.height, bbwh[2] / self.width, bbwh[3] / self.height]
             self.bbwhs.append(bbwh)
+            self.pk_vals.append(pk_val_hi_res)
 
 
-        logger.info(f'Found {len(self.pks)} peaks')
+        logger.info(f'Found {len(self.pks)} peaks {[pk[2] for pk in self.pks]} {[pk[3] for pk in self.pks]} {[pk[4] for pk in self.pks]}')
         # if length tile list < self.num_peakspad with zeros
         while len(self.fullres_img_tile_lst) < self.num_peaks:
             bs2 = self.bboxsize*2
             self.fullres_img_tile_lst.append(np.zeros((bs2, bs2, 3), dtype=np.uint8))
             self.lowres_img_tile_lst.append(np.zeros((bs2, bs2), dtype=np.uint8))
             self.lowres_cmo_tile_lst.append(np.zeros((bs2, bs2), dtype=np.uint8))
-            self.pk_vals.append(0)
+            self.pk_vals.append((0, 0, 0, 0, 0))
             self.bbwhs.append([0, 0, 0, 0])
 
-
         
-        return self.pk_vals, self.bbwhs
+        return self.pks, self.bbwhs
 
 
     def classify(self, detections, image, pk_vals, pk_gradients, scale, filterClassID):
@@ -295,20 +321,22 @@ class CMO_Peak():
         """
 
         self.height, self.width = getGImages().full_rgb.shape[:2]
-        pk_vals, bbwhs = self.find_peaks()
+        pks, bbwhs = self.find_peaks()
 
-        confidences = [pk_val / 255.0 for pk_val in pk_vals]
+        confidences = [pk[2] / 255.0 for pk in pks]  # peak value in low res image
         class_ids = [0] * len(self.fullres_img_tile_lst)
 
-        try:
-            # sort lists by confidences (peak values)
-            zipped_lists = list(zip( bbwhs, confidences, class_ids))
-            # Sort the zipped lists by confidences (the third element in each tuple)
-            sorted_lists = sorted(zipped_lists, key=lambda x: x[2], reverse=True)
-            # Unzip the sorted list back into individual lists
-            bbwhs, confidences, class_ids = zip(*sorted_lists)
-        except Exception as e:
-            logger.warning(e)
+        # already sorted by low res peak value
+
+                # try:
+                #     # sort lists by confidences (peak values)
+                #     zipped_lists = list(zip( bbwhs, confidences, class_ids))
+                #     # Sort the zipped lists by confidences (the third element in each tuple)
+                #     sorted_lists = sorted(zipped_lists, key=lambda x: x[2], reverse=True)
+                #     # Unzip the sorted list back into individual lists
+                #     bbwhs, confidences, class_ids = zip(*sorted_lists)
+                # except Exception as e:
+                #     logger.warning(e)
 
         return  bbwhs, confidences, class_ids
 
@@ -370,7 +398,10 @@ class CMO_Peak():
 
     def display_results(self, image, alpha=0.3):
 
-        disp_image = overlay_mask(image, getGImages().mask, alpha=alpha)
+        if getGImages().mask is not None:
+            disp_image = overlay_mask(image, getGImages().mask, alpha=alpha)
+        else:
+            disp_image = image
         disp_image = draw_bboxes(disp_image, self.bbwhs, self.pks, text=True, thickness=8, alpha=alpha)
         for count, tile in enumerate (self.fullres_img_tile_lst):
             # put label count in left top corner
@@ -378,7 +409,13 @@ class CMO_Peak():
             # cv2.putText(tile, str(count), (0, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, clr, 1)
             putlabel(tile, f'{count}', (0,10), fontScale=0.4, color=clr, thickness=1)
         try:
-            tile_img = np.hstack(self.fullres_img_tile_lst)
+
+            tiles = []
+            if len(self.fullres_img_tile_lst) < MAX_NUM_TILES:
+                tiles = [np.zeros_like(tile)] * (MAX_NUM_TILES - len(self.fullres_img_tile_lst))
+            tile_img = np.hstack(self.fullres_img_tile_lst+tiles)
+
+
             tile_img = resize(tile_img, width=image.shape[1], inter=cv2.INTER_NEAREST)
             disp_image = np.vstack([tile_img, disp_image])
         except Exception as e:

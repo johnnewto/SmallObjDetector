@@ -5,7 +5,7 @@ import cv2 as cv2
 import numpy as np
 
 from imutils import resize
-from .image_utils import cv2_img_show
+
 import time, sys
 
 if sys.platform == "win32":
@@ -152,7 +152,7 @@ def find_sky_1(img, threshold=None, kernal_size=5):
     return new_mask
 
 
-def find_sky_2(gray_img_s, threshold=None, kernal_size=5):
+def find_sky_2(gray_img_s, threshold=None, kernal_size=5, remove_regions=('bot', 'left', 'right')):
     """ optimised for marine images"""
     edges = cv2.Canny(gray_img_s, threshold1=50, threshold2=255, apertureSize=3)
     kernel = np.ones((3, 5), 'uint8')
@@ -204,9 +204,13 @@ def find_sky_2(gray_img_s, threshold=None, kernal_size=5):
 
         # remove small regions ( area < 10%) that are not adjacent to bottom or left or right sides
         if area_ratio < 0.1:
-            if not (bot_side == gray_img_s.shape[0] or left_side == 0 or right_side == gray_img_s.shape[1]):
+            # if not (bot_side == gray_img_s.shape[0] or left_side == 0 or right_side == gray_img_s.shape[1]):
+            if 'bot' in remove_regions and not bot_side == gray_img_s.shape[0]:  #  or left_side == 0 or right_side == gray_img_s.shape[1]):
                 labels[labels == idx] = 0
-
+            if 'left' in remove_regions and not left_side == 0:
+                labels[labels == idx] = 0
+            if 'right' in remove_regions and not right_side == gray_img_s.shape[1]:
+                labels[labels == idx] = 0
             # brightmin = np.min(gray_img_s[labels == idx])
             # # print(brightmin, brightest)
             # if brightmin > 50:

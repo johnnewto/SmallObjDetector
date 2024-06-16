@@ -56,23 +56,38 @@ sodrun -h
    keys: q     : quit
          space : pause
          g     : go
-         d     : change direction
+         .     : change direction
          d     : increment 10 frames
          a     : decrement 10 frames
          s     : increment 100 frames
          w     : decrement 100 frames
      
-usage: sodrun [-h] [-r] [-d DIR]
+usage: sodrun [-h] [-r] [-n NAME] [-f FRAMERATE] [-d DIR] [-s START] [-e END] [-t TRACKS]
 
 optional arguments:
-  -h, --help         show this help message and exit
-  -r, --record       Enable recording
-  -d DIR, --dir DIR  directory to view
+  -h, --help            show this help message and exit
+  -r, --record          Enable recording, using default "dir path" name if not defined with -n NAME
+  -n NAME, --name NAME  record name
+  -f FRAMERATE, --framerate FRAMERATE
+                        recording framerate
+  -d DIR, --dir DIR     directory to view
+  -s START, --start START
+                        start frame
+  -e END, --end END     end frame
+  -t TRACKS, --tracks TRACKS
+                        number of objects to track
 ```
 
-IF no directory is given it runs small object detections on a small image [data set](https://github.com/johnnewto/MauiTracker/tree/main/data/Karioitahi_09Feb2022/132MSDCF-28mm-f4)
+If no directory is given it runs small object detections on a small image [data set](https://github.com/johnnewto/MauiTracker/tree/main/data/Karioitahi_09Feb2022/132MSDCF-28mm-f4)
 
-With one of the windows in focus press spacebar to step, g to go continuously, d to change direction and q to quit
+With one of the windows in focus press **spacebar** to step, **g** to go continuously, **/** to change direction, **a** back 10 frames, **d** foward 10 frames and **q** to quit
+
+``` sh
+sodrun -d /home/john/data/maui-data/Taupiri-16-May/snapshots-air/cam_3 -s 116 -e 500 -t 1 -r -n test -f 5
+```
+``` sh
+sodrun -d /home/john/data/maui-data/Kariotahi_21_may_2024/cam_3 -t 10 -s 100 -e 250 
+````
 
 <video width="1280" height="720"  controls>
   <source src="https://raw.githack.com/johnnewto/MauiTracker/main/data/Karioitahi_09Feb2022/132MSDCF-28mm-f4.mp4" type="video/mp4">

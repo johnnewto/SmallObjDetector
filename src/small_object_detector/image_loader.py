@@ -71,7 +71,7 @@ class ImageLoader:
         return self
 
     def __len__(self):
-        return len(self.dataset)
+        return self.num_frames
 
     @abstractmethod
     def __next__(self):
@@ -140,7 +140,7 @@ class PILLoader(ImageLoader):
 #
 INTHREAD = True
 class ImageLoader(ImageLoader):
-    def __init__(self, directory, names, mode='RGB', cvtgray=True, start_frame=None, **kwargs):
+    def __init__(self, directory, names, mode='RGB', cvtgray=True, start_frame=None, end_frame=None, **kwargs):
         super(ImageLoader, self).__init__(directory, names, mode=mode)
         self.jpeg_reader = TurboJPEG()  # create TurboJPEG object for image reading
         self.cvtgray = cvtgray
@@ -149,6 +149,11 @@ class ImageLoader(ImageLoader):
             self.frame_num = 0
         else:
             self.frame_num = start_frame
+
+        if end_frame is None:
+            self.num_frames = len(self.dataset)
+        else:
+            self.num_frames  = min(end_frame, len(self.dataset))
 
         self.kwargs = kwargs
         self.select = 0
@@ -174,19 +179,19 @@ class ImageLoader(ImageLoader):
         return _fps
 
     def read_first_image(self):
-        if self.frame_num < len(self.dataset):
+        if self.frame_num < self.num_frames:
             with open(self.dataset[self.frame_num], "rb") as file:
                 img = self.jpeg_reader.decode(file.read(), pixel_format=self.pixel_format)
                 if img.ndim == 3 and self.cvtgray:
                     return cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
                 return  (img, self.dataset[self.frame_num])
         else:
-            logger.warning("self.frame_num > len(self.dataset)")
+            logger.warning("self.frame_num > self.num_frames")
 
     def _read_next_image(self, idx, sel):
         """ this is run in a thread"""
-        if idx >= len(self.dataset):
-            logger.warning("idx >= len(self.dataset)")
+        if idx >= self.num_frames:
+            logger.warning("idx >= self.num_frames")
             return
         with open(self.dataset[idx], "rb")  as file:
             # del self._img
@@ -219,8 +224,8 @@ class ImageLoader(ImageLoader):
         # clip the frame number
         if self.frame_num < 0:
             self.frame_num = 0
-        if self.frame_num >= self.__len__():
-            self.frame_num = self.__len__() - 1
+        if self.frame_num >= self.num_frames: 
+            self.frame_num = self.num_frames - 1
 
 
         # self.sample_idx += 1
@@ -240,14 +245,14 @@ class ImageLoader(ImageLoader):
             return self.image, self.frame_num, True
 
         else:
-            # return blank image
-            shape = self.firstimage[0].shape
-            image = np.ones(shape, dtype=np.uint8)*125
-            cv2.putText(image, f'Frame = {self.frame_num}', (shape[0]//2, shape[1]//2), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-            return (image, 0)  , self.frame_num, True
+            # # return blank image
+            # shape = self.firstimage[0].shape
+            # image = np.ones(shape, dtype=np.uint8)*125
+            # cv2.putText(image, f'Frame = {self.frame_num}', (shape[0]//2, shape[1]//2), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            # return (image, 0)  , self.frame_num, True
         
         # normally we would raise StopIteration
-            # raise StopIteration
+            raise StopIteration
 
 
 
@@ -268,7 +273,7 @@ methods = {
 
 
 if __name__ == '__main__':
-    from image_utils import putText
+
     from pathlib import Path
 
     home = str(Path.home())
@@ -297,7 +302,7 @@ if __name__ == '__main__':
 
         last_img_path = img_path
         image = resize(image, width=500)
-        putText(image, f'Frame = {frameNum}, {timer() :.3f}')
+        # putText(image, f'Frame = {frameNum}, {timer() :.3f}')
         print(f'Frame = {frameNum}, {img_path}')
         # continue
         cv2.imshow('image',  image)

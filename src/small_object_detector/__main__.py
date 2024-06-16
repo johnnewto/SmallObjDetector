@@ -34,13 +34,14 @@ logging.basicConfig(format='%(asctime)-8s,%(msecs)-3d %(levelname)5s [%(filename
 logger = logging.getLogger(__name__)
 
 class Viewer:
-    def __init__(self, _loader, detecter, tracker, display_width=2000, record=False, path='', qgc=None):
+    def __init__(self, _loader, detecter, tracker, display_width=2000, record=False, record_name=None, frame_rate=5, path='', qgc=None):
         self.loader = _loader
         self.detecter: CMO_Peak = detecter
         self.tracker = tracker
         self.display_width = display_width
         self.record = record
-        self.do_run = True
+        self.record_name = record_name
+        self.frame_rate = frame_rate
         self.path = path
 
         self.detecter.set_max_pool(12)
@@ -65,8 +66,11 @@ class Viewer:
         cv2.setWindowProperty(WindowName, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
 
         if self.record:
-            filename = f"{self.path}-{self.detecter.morph_op}.mp4"
-            video = VideoWriter(filename, fps=5.0)
+            if self.record_name:
+                filename = f"{self.record_name}.mp4"
+            else:
+                filename = f"{self.path}-{self.detecter.morph_op}.mp4"
+            video = VideoWriter(filename, fps=self.frame_rate)
             print(f"Recording to {filename}")
 
 
@@ -78,11 +82,11 @@ class Viewer:
 
             if grabbed or first_run:
                 first_run = False
-                print(f"frame {frameNum} : {filename}  {grabbed}")
+                # print(f"frame {frameNum} : {filename}  {grabbed}")
                 if len(image.shape) == 2:
                     image = cv2.cvtColor(image, cv2.COLOR_BAYER_BG2RGB)
                 setGImages(image)
-                getGImages().mask_sky()
+                # getGImages().mask_sky()
                 # cv2_img_show('find_sky_2-mask', getGImages().mask, flags=cv2.WINDOW_NORMAL)
 
         
@@ -98,10 +102,10 @@ class Viewer:
 
                 if self.record:
                     img = resize(disp_image, width=3000)  # not sure why this is needed to stop black screen video
-                    for i in range(2):  # to allow easier pause and frame seeking in video play
-                        video.add(img)
+                    # for i in range(2):  # to allow easier pause and frame seeking in video play
+                    video.add(img)
 
-            cv2_img_show(WindowName, disp_image)
+            cv2_img_show(WindowName, disp_image, win_width=self.display_width)
             # try:
             #     cv2_img_show('fullres_tiles', vstack(
             #         [np.hstack(self.model.fullres_img_tile_lst), np.hstack(self.model.fullres_cmo_tile_lst)]),
@@ -124,7 +128,7 @@ class Viewer:
                 wait_timeout = 0
             if k == ord('g'):
                 wait_timeout = 1
-            if k == ord('d'):
+            if k == ord('/'):
                 # change direction
                 wait_timeout = 0
                 self.loader._direction_fwd = not self.loader._direction_fwd
@@ -160,7 +164,7 @@ class Viewer:
         print("   keys: q     : quit")
         print("         space : pause")
         print("         g     : go")
-        print("         d     : change direction")
+        print("         .     : change direction")
         print("         d     : increment 10 frames")
         print("         a     : decrement 10 frames")
         print("         s     : increment 100 frames")
@@ -176,14 +180,26 @@ def main():
     _tracker = None
 
     parser = argparse.ArgumentParser(description=Viewer.help())
-    parser.add_argument('-r', '--record', action='store_true', help='Enable recording', default=False)
+    parser.add_argument('-r', '--record', action='store_true', help='Enable recording, using default "dir path" name if not defined with -n NAME', default=False)
+    parser.add_argument('-n', '--name', type=str, help='record name', default=None)
+    parser.add_argument('-f', '--framerate', type=int, help='recording framerate', default=5)
     parser.add_argument('-d', '--dir', type=str, help='directory to view', default=None)
+    parser.add_argument('-s', '--start', type=int, help='start frame', default=None)   
+    parser.add_argument('-e', '--end', type=int, help='end frame', default=None)
+    parser.add_argument('-t', '--tracks', type=int, help='number of objects to track', default=5)
 
     # add Viewer.help() to parser help
 
     args = parser.parse_args()
 
     RECORD = args.record
+    RECORD_NAME = args.name 
+    FRAME_RATE = args.framerate
+    START_FRAME = args.start
+    END_FRAME = args.end
+    NUM_PEAKS = args.tracks
+    RECORD = True
+    # RECORD_NAME = 'temp'
 
     # home = str(Path.home())
     detecter = CMO_Peak(confidence_threshold=0.1,
@@ -191,7 +207,7 @@ def main():
                       # labels_path='/media/jn/0c013c4e-2b1c-491e-8fd8-459de5a36fd8/home/jn/data/imagenet_class_index.json',
                       expected_peak_max=60,
                       peak_min_distance=5,
-                      num_peaks=5,
+                      num_peaks=NUM_PEAKS,
                       maxpool=12,
                       morph_kernalsize=3,
                       morph_op='BH+filter',
@@ -220,9 +236,9 @@ def main():
 
     cv2.destroyAllWindows()
 
-    loader = ImageLoader(path, names=('*.jpg','*.JPG'), mode='RGB', cvtgray=False, start_frame=0)
+    loader = ImageLoader(path, names=('*.jpg','*.JPG'), mode='RGB', cvtgray=False, start_frame=START_FRAME, end_frame=END_FRAME)
   
-    view = Viewer(loader, detecter, _tracker, display_width=6000, record=RECORD, path=path)
+    view = Viewer(loader, detecter, _tracker, display_width=1000, record=RECORD, frame_rate=FRAME_RATE, path=path)
 
     view(wait_timeout=0)
 

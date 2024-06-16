@@ -522,7 +522,7 @@ def putText(img, text, row=30, col=10, fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontSc
 
 
 
-def cv2_img_show(name, img, width=None, height=None, flags=None, mode='RGB', normalise=False):
+def cv2_img_show(name, img, win_width=None, flags=None, mode='RGB', normalise=False):
     """ show image in a cv2 namedwindow, you can set the width or height"""
     img = img.astype('uint8')
     # try:
@@ -535,11 +535,17 @@ def cv2_img_show(name, img, width=None, height=None, flags=None, mode='RGB', nor
         # setting fullscreen make this show on front
         cv2.setWindowProperty(name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.setWindowProperty(name, cv2.WND_PROP_FULLSCREEN, flags)
+        # set window size
+        # cv2.setWindowProperty(name, cv2.WND_PROP_AUTOSIZE, cv2.WINDOW_AUTOSIZE) 
+        if win_width is not None:
+            height = int(img.shape[0] * win_width / img.shape[1])
+            cv2.resizeWindow(name, win_width, height)
+
 
 
     if mode=='RGB' and img.ndim == 3:
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    img = resize(img, width=width, height=height)
+    # img = resize(img, width=width, height=height)
     if normalise:
         img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX) # normalise to 0-255
     cv2.imshow(name, img)
